@@ -1,0 +1,221 @@
+openapi: 3.0.0
+info:
+  title: Search API
+  description: API for IP search and stored data retrieval
+  version: 1.0.0
+
+paths:
+  /search:
+    post:
+      summary: Search for an IP
+      operationId: searchIP
+      parameters:
+        - name: ip
+          in: query
+          description: IP address to search for
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successfully fetched IP details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IPWhoisDto"
+
+  /search/list:
+    get:
+      summary: Get stored search data with pagination
+      operationId: searchStoredData
+      parameters:
+        - name: page
+          in: query
+          description: Page number (default 1)
+          required: false
+          schema:
+            type: integer
+            example: 1
+        - name: limit
+          in: query
+          description: Records per page (default 10)
+          required: false
+          schema:
+            type: integer
+            example: 10
+        - name: country
+          in: query
+          description: Country filter. Use ISO 3166 Alpha-2 codes (e.g., "DE" for Germany, "US" for United States).
+          required: false
+          schema:
+            type: string
+            example: "DE"
+        - name: city
+          in: query
+          description: Filter by city
+          required: false
+          schema:
+            type: string
+            example: "Bonn"
+        - name: currency
+          in: query
+          description: Currency filter. Use ISO 4217 currency codes (e.g., "USD" for US Dollar, "EUR" for Euro).
+          required: false
+          schema:
+            type: string
+            example: "EUR"
+      responses:
+        "200":
+          description: Successfully retrieved stored search data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/IPWhoisDto"
+  /timeseries:
+    get:
+      summary: Retrieve API execution logs
+      operationId: getExecutionLogs
+      parameters:
+        - name: metric
+          in: query
+          description: The metric name used for logging search_api_filter or search_api_ip
+          required: true
+          schema:
+            type: string
+            example: "search_api_filter"
+        - name: start
+          in: query
+          description: Start timestamp (UNIX format)
+          required: true
+          schema:
+            type: integer
+            example: 1739538857548
+        - name: end
+          in: query
+          description: End timestamp (UNIX format)
+          required: true
+          schema:
+            type: integer
+            example: 1739798077064
+      responses:
+        "200":
+          description: Successfully retrieved API logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LogDto"
+components:
+  schemas:
+    LogDto:
+      type: object
+      properties:
+        timestamp:
+          type: number
+          example: "UNIX datetime"
+        executionTime:
+          type: number
+          example: 2
+        api:
+          type: string
+          example: "search_api_ip"
+        query:
+          type: object
+          example: { "city": "Bonn" }
+    IPWhoisDto:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 'mongo ObjectId'
+        ip:
+          type: string
+          example: '193.254.165.0'
+        success:
+          type: boolean
+          example: true
+        type:
+          type: string
+          example: 'IPv4'
+        continent:
+          type: string
+          example: 'Europe'
+        continent_code:
+          type: string
+          example: 'EU'
+        country:
+          type: string
+          example: 'Germany'
+        country_code:
+          type: string
+          example: 'DE'
+        country_flag:
+          type: string
+          example: 'https://cdn.ipwhois.io/flags/de.svg'
+        country_capital:
+          type: string
+          example: 'Berlin'
+        country_phone:
+          type: string
+          example: '+49'
+        country_neighbours:
+          type: string
+          example: 'AT,BE,CH,CZ,DK,FR,LU,NL,PL'
+        region:
+          type: string
+          example: 'North Rhine-Westphalia'
+        city:
+          type: string
+          example: 'Bonn'
+        latitude:
+          type: number
+          example: 50.73743
+        longitude:
+          type: number
+          example: 7.0982068
+        asn:
+          type: string
+          example: 'AS3320'
+        org:
+          type: string
+          example: 'Telekom Deutschland GmbH'
+        isp:
+          type: string
+          example: 'Deutsche Telekom AG'
+        timezone:
+          type: string
+          example: 'Europe/Berlin'
+        timezone_name:
+          type: string
+          example: 'CET'
+        timezone_dstOffset:
+          type: integer
+          example: 0
+        timezone_gmtOffset:
+          type: integer
+          example: 3600
+        timezone_gmt:
+          type: string
+          example: '+01:00'
+        currency:
+          type: string
+          example: 'Euro'
+        currency_code:
+          type: string
+          example: 'EUR'
+        currency_symbol:
+          type: string
+          example: '€'
+        currency_rates:
+          type: number
+          example: 0.953
+        currency_plural:
+          type: string
+          example: 'euros'
+        timestamp:
+          type: string
+          format: date-time
+          example: 'ISO date'

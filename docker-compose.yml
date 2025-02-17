@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  service-a:
+    build: ./service-a
+    ports:
+      - "${PORT_A}:${PORT_A}"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mongo:
+        condition: service_started
+      redis:
+        condition: service_started
+    env_file:
+      - .env  
+    environment:
+      - MONGO_URI_A=${MONGO_URI_A}
+      - REDIS_URI=${REDIS_URI}
+      - RABBITMQ_URI=${RABBITMQ_URI}
+      - PORT_A=3000
+    networks:
+      - app-network  
+
+  service-b:
+    build: ./service-b
+    ports:
+      - "${PORT_B}:${PORT_B}"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mongo:
+        condition: service_started
+    env_file:
+      - .env  
+    environment:
+      - MONGO_URI_B=${MONGO_URI_B}
+      - RABBITMQ_URI=${RABBITMQ_URI}
+      - PORT_B=3001
+    networks:
+      - app-network  
+
+  mongo:
+    image: mongo:5
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - app-network  
+
+  redis:
+    image: redis:6
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - app-network  
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    env_file:
+      - .env  
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 5  
+    networks:
+      - app-network   
+
+volumes:
+  mongo-data:
+  redis-data:
+
+networks:
+  app-network:
