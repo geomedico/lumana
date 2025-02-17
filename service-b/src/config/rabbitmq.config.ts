@@ -13,7 +13,9 @@ export class RabbitMQConfig extends EventEmitter implements OnModuleInit {
   }
 
   async onModuleInit() {
-    this.connection = await connect(this.configService.get<string>('RABBITMQ_URI'));
+    this.connection = await connect(
+      this.configService.get<string>('RABBITMQ_URI'),
+    );
     this.channel = await this.connection.createChannel();
     await this.channel?.assertQueue('search.completed', { durable: false });
     await this.emit('rabbit_ready');

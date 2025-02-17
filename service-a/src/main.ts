@@ -6,7 +6,7 @@ import * as YAML from 'yamljs';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
- 
+
   const configService = app.get(ConfigService);
   const PORT = +configService.get<number>('PORT_A', 3000);
 
@@ -15,4 +15,4 @@ async function bootstrap() {
 
   await app.listen(PORT);
 }
-bootstrap()
+bootstrap();

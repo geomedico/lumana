@@ -22,4 +22,4 @@ export interface IpInfo {
   currency: string;
   currency_code: string;
   timestamp: Date;
-};
+}

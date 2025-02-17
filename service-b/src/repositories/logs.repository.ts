@@ -8,8 +8,7 @@ import { Log } from '../models/log.model';
 export class LogsRepository implements OnModuleInit {
   private collection: Collection<Log>;
 
-  constructor(private readonly mongoDBService: MongoDBConfig) {
-  }
+  constructor(private readonly mongoDBService: MongoDBConfig) {}
 
   async onModuleInit() {
     console.log('🔍 Waiting for MongoDB to be ready...');
@@ -29,9 +28,7 @@ export class LogsRepository implements OnModuleInit {
   }
 
   async createIndexes(): Promise<void> {
-    await this.collection?.createIndexes([
-      { key: { timestamp: 1 } }
-    ]);
+    await this.collection?.createIndexes([{ key: { timestamp: 1 } }]);
   }
 
   async storeLog(logData: Record<string, any>): Promise<InsertOneResult<Log>> {
@@ -39,11 +36,13 @@ export class LogsRepository implements OnModuleInit {
     return this.collection.insertOne({
       _id: new ObjectId(),
       data: JSON.stringify(logData, null, 2),
-      timestamp
+      timestamp,
     });
   }
 
   async findLogs(startDate: Date, endDate: Date): Promise<WithId<Log>[]> {
-    return this.collection.find({ timestamp: { $gte: startDate, $lte: endDate } }).toArray();
+    return this.collection
+      .find({ timestamp: { $gte: startDate, $lte: endDate } })
+      .toArray();
   }
 }

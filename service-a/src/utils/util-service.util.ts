@@ -12,13 +12,17 @@ export class Util {
 
       const parsed = JSON.parse(log);
 
-      if (parsed.query && typeof parsed.query === 'string' && this.isJsonParsable(parsed.query)) {
+      if (
+        parsed.query &&
+        typeof parsed.query === 'string' &&
+        this.isJsonParsable(parsed.query)
+      ) {
         parsed.query = JSON.parse(parsed.query);
       }
 
       return parsed;
-    } catch (error) {
-      this.logger.error(`Failed to parse log entry: ${log}`, error.stack);
+    } catch (err) {
+      this.logger.error(`Failed to parse log entry: ${log}`, err.stack);
       return { executionTime: log, query: null };
     }
   }
@@ -27,7 +31,8 @@ export class Util {
     try {
       JSON.parse(str);
       return true;
-    } catch (error) {
+    } catch (err) {
+      this.logger.error(err);
       return false;
     }
   }

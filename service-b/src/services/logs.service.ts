@@ -10,8 +10,8 @@ export class LogsService implements OnModuleInit {
 
   constructor(
     private readonly logsRepository: LogsRepository,
-    private readonly rabbitMQService: RabbitMQConfig
-  ) { }
+    private readonly rabbitMQService: RabbitMQConfig,
+  ) {}
 
   async onModuleInit(): Promise<void> {
     await new Promise<void>((resolve) => {

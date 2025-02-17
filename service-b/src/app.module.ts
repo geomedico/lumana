@@ -9,15 +9,9 @@ import { LogsRepository } from './repositories/logs.repository';
 
 import { LogsService } from './services/logs.service';
 
-
 @Module({
   imports: [ConfigModule.forRoot({ isGlobal: true })],
   controllers: [LogsController],
-  providers: [
-    MongoDBConfig,
-    RabbitMQConfig,
-    LogsRepository,
-    LogsService
-  ]
+  providers: [MongoDBConfig, RabbitMQConfig, LogsRepository, LogsService],
 })
-export class AppModule { }
+export class AppModule {}

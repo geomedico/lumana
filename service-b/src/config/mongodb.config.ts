@@ -14,7 +14,9 @@ export class MongoDBConfig extends EventEmitter implements OnModuleInit {
 
   async onModuleInit(): Promise<void> {
     try {
-      this.client = new MongoClient(this.configService.get<string>('MONGO_URI_B'));
+      this.client = new MongoClient(
+        this.configService.get<string>('MONGO_URI_B'),
+      );
       await this.client.connect();
       this.db = this.getDatabase('service_b');
       this.emit('mongo_ready');

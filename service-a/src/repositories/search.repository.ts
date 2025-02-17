@@ -11,9 +11,9 @@ interface IAddFieldSearch {
 @Injectable()
 export class SearchRepository implements OnModuleInit {
   private readonly logger = new Logger(SearchRepository.name);
-  
+
   private collection: Collection<IpInfo>;
-  constructor(private readonly mongoDBService: MongoDBConfig) { }
+  constructor(private readonly mongoDBService: MongoDBConfig) {}
 
   async onModuleInit() {
     this.logger.log('🔍 Waiting for MongoDB to be ready...');
@@ -38,7 +38,7 @@ export class SearchRepository implements OnModuleInit {
       { key: { currency: 1 } },
       { key: { country: 1 } },
       { key: { city: 1 } },
-      { key: { timestamp: 1 } }
+      { key: { timestamp: 1 } },
     ]);
   }
 
@@ -46,28 +46,33 @@ export class SearchRepository implements OnModuleInit {
     return this.collection?.findOne({ ip });
   }
 
-  async findWithPagination(filters: Partial<IpInfo>, page: number, limit: number): Promise<IpInfo[] | null> {
-    type QueryType = Pick<IpInfo, | 'city'> & IAddFieldSearch;
+  async findWithPagination(
+    filters: Partial<IpInfo>,
+    page: number,
+    limit: number,
+  ): Promise<IpInfo[] | null> {
+    type QueryType = Pick<IpInfo, 'city'> & IAddFieldSearch;
     const query = {} as QueryType;
     if (filters.city) query.city = capitalizeFirstLetter(filters.city);
     if (filters.country) query.country_code = filters.country.toUpperCase();
     if (filters.currency) query.currency_code = filters.currency.toUpperCase();
 
-    return this.collection?.find(query)
+    return this.collection
+      ?.find(query)
       .skip((page - 1) * limit)
       .limit(limit)
       .toArray();
 
-      function capitalizeFirstLetter([ first = '', ...rest ]: string): string {
-        return [first.toUpperCase(), ...rest].join('');
-      }
-  };
+    function capitalizeFirstLetter([first = '', ...rest]: string): string {
+      return [first.toUpperCase(), ...rest].join('');
+    }
+  }
 
   async insert(data: IpInfo): Promise<InsertOneResult<IpInfo>> {
     return this.collection?.insertOne({
       ...data,
       _id: new ObjectId(),
-      timestamp: new Date()
+      timestamp: new Date(),
     });
   }
 }

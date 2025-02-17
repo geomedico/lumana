@@ -14,7 +14,7 @@ export class RabbitMQService implements OnModuleInit {
   }
 
   async init() {
-    const RABBITMQ_URI = this.configService.get<string>('RABBITMQ_URI')
+    const RABBITMQ_URI = this.configService.get<string>('RABBITMQ_URI');
     this.connection = await connect(RABBITMQ_URI);
     this.channel = await this.connection.createChannel();
   }

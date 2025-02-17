@@ -1,13 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { TimeseriesRepo } from '../repositories/timeseries.repository';
+import { ILog } from './../models/log.model';
 
 @Injectable()
 export class TimeseriesService {
   private readonly logger = new Logger(TimeseriesService.name);
 
-  constructor(private readonly timeseriesRepository: TimeseriesRepo) { }
+  constructor(private readonly timeseriesRepository: TimeseriesRepo) {}
 
-  async getLogs(metric: string, start: number, end: number) {
+  async getLogs(metric: string, start: number, end: number): Promise<ILog[]> {
     try {
       return this.timeseriesRepository.getLogs(metric, start, end);
     } catch (err) {
@@ -16,9 +17,17 @@ export class TimeseriesService {
     }
   }
 
-  async logExecutionTime(metric: string, executionTime: number, query?: string): Promise<void> {
+  async logExecutionTime(
+    metric: string,
+    executionTime: number,
+    query?: string,
+  ): Promise<void> {
     try {
-      return this.timeseriesRepository.logExecutionTime(metric, executionTime, query);
+      return this.timeseriesRepository.logExecutionTime(
+        metric,
+        executionTime,
+        query,
+      );
     } catch (err) {
       this.logger.error('error saving timeseries logs:', err);
       return Promise.reject(err);

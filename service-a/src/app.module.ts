@@ -16,11 +16,7 @@ import { TimeseriesRepo } from './repositories/timeseries.repository';
 import { UtilsModule } from './utils/utils.module';
 
 @Module({
-  imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
-    HttpModule,
-    UtilsModule
-  ],
+  imports: [ConfigModule.forRoot({ isGlobal: true }), HttpModule, UtilsModule],
   controllers: [SearchController, TimeseriesController],
   providers: [
     MongoDBConfig,
@@ -31,6 +27,6 @@ import { UtilsModule } from './utils/utils.module';
     TimeseriesService,
     SearchRepository,
     IPWhoisService,
-  ]
+  ],
 })
 export class AppModule {}

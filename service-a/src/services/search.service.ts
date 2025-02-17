@@ -3,7 +3,8 @@ import { SearchRepository } from '../repositories/search.repository';
 import { RabbitMQService } from '../config/rabbitmq.config';
 import { IPWhoisService } from './ipwhois.service';
 import { TimeseriesService } from './timeseries.service';
-import { IpInfo } from '../models/ipinfo.model';
+import { IpInfo } from './../models/ipinfo.model';
+import { TLogs } from './../common/enums';
 
 @Injectable()
 export class SearchService {
@@ -12,8 +13,8 @@ export class SearchService {
     private readonly searchRepository: SearchRepository,
     private readonly ipWhoisService: IPWhoisService,
     private readonly rabbitMQService: RabbitMQService,
-    private readonly redisTimeSeriesService: TimeseriesService
-  ) { }
+    private readonly redisTimeSeriesService: TimeseriesService,
+  ) {}
 
   async search(ip: string): Promise<IpInfo> {
     try {
@@ -25,29 +26,51 @@ export class SearchService {
         storedData = fetchedData;
       }
 
-      this.rabbitMQService.publish('search.completed', { query: ip, result: storedData });
+      this.rabbitMQService.publish('search.completed', {
+        query: ip,
+        result: storedData,
+      });
       const executionTime = Date.now() - startTime;
 
-      await this.redisTimeSeriesService.logExecutionTime('search_api_ip', executionTime, ip)
+      await this.redisTimeSeriesService.logExecutionTime(
+        TLogs.SEARCH_API_IP,
+        executionTime,
+        ip,
+      );
 
       return storedData;
     } catch (error) {
-      this.logger.error(`Error fetching data for IP ${ip} from IPWhois:`, error);
-      return Promise.reject(error)
+      this.logger.error(
+        `Error fetching data for IP ${ip} from IPWhois:`,
+        error,
+      );
+      return Promise.reject(error);
     }
   }
 
-  async searchStoredData(filters: Partial<IpInfo>, page: number, limit: number): Promise<IpInfo[] | null> {
+  async searchStoredData(
+    filters: Partial<IpInfo>,
+    page: number,
+    limit: number,
+  ): Promise<IpInfo[] | null> {
     try {
       const startTime = Date.now();
-      const result = await this.searchRepository.findWithPagination(filters, page, limit);
+      const result = await this.searchRepository.findWithPagination(
+        filters,
+        page,
+        limit,
+      );
       const executionTime = Date.now() - startTime;
-      await this.redisTimeSeriesService.logExecutionTime('search_api_filter', executionTime, JSON.stringify(filters))
+      await this.redisTimeSeriesService.logExecutionTime(
+        TLogs.SEARCH_API_FILTER,
+        executionTime,
+        JSON.stringify(filters),
+      );
 
       return result;
     } catch (error) {
       this.logger.error('Error Search stored data:', error);
-      return Promise.reject(error)
+      return Promise.reject(error);
     }
   }
 }
