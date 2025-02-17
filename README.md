@@ -50,7 +50,7 @@ Expose 1 APIs via swagger to get all event logs by date range. Perform the query
 
 - **bash command**: `docker-compose up --build`
 
-## **Swagger API Document Annotation References**
+## **Swagger API Document Annotation Reference**
 
-- **url:**: `http://localhost:3000/api-docs`
+- **url**: `http://localhost:3000/api-docs`
 
