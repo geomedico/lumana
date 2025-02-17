@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
+import { performance } from 'perf_hooks';
 import { SearchRepository } from '../repositories/search.repository';
 import { RabbitMQService } from '../config/rabbitmq.config';
 import { IPWhoisService } from './ipwhois.service';
@@ -17,34 +18,42 @@ export class SearchService {
   ) {}
 
   async search(ip: string): Promise<IpInfo> {
+    const startTime = performance.now();
+
     try {
-      const startTime = Date.now();
       let storedData = await this.searchRepository.find(ip);
+
       if (!storedData) {
-        const fetchedData = await this.ipWhoisService.fetchIPData(ip);
-        await this.searchRepository.insert(fetchedData);
-        storedData = fetchedData;
+        storedData = await this.ipWhoisService.fetchIPData(ip);
+        await this.searchRepository.insert(storedData);
       }
 
-      this.rabbitMQService.publish('search.completed', {
-        query: ip,
-        result: storedData,
-      });
-      const executionTime = Date.now() - startTime;
+      const executionTime = performance.now() - startTime;
 
-      await this.redisTimeSeriesService.logExecutionTime(
-        TLogs.SEARCH_API_IP,
-        executionTime,
-        ip,
-      );
+      await Promise.allSettled([
+        this.rabbitMQService.publish('search.completed', {
+          query: ip,
+          result: storedData,
+        }),
+        this.redisTimeSeriesService.logExecutionTime(
+          TLogs.SEARCH_API_IP,
+          executionTime,
+          ip,
+        ),
+      ]);
 
       return storedData;
     } catch (error) {
-      this.logger.error(
-        `Error fetching data for IP ${ip} from IPWhois:`,
-        error,
+      this.logger.error(`Error fetching data for IP ${ip}:`, error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        'Internal Server Error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
-      return Promise.reject(error);
     }
   }
 
@@ -53,20 +62,28 @@ export class SearchService {
     page: number,
     limit: number,
   ): Promise<IpInfo[] | null> {
+    const startTime = performance.now();
     try {
-      const startTime = Date.now();
-      const result = await this.searchRepository.findWithPagination(
+      const resultPromise = this.searchRepository.findWithPagination(
         filters,
         page,
         limit,
       );
-      const executionTime = Date.now() - startTime;
-      await this.redisTimeSeriesService.logExecutionTime(
-        TLogs.SEARCH_API_FILTER,
-        executionTime,
-        JSON.stringify(filters),
-      );
 
+      const executionTimePromise = resultPromise.then(() => {
+        const executionTime = performance.now() - startTime;
+        return this.redisTimeSeriesService.logExecutionTime(
+          TLogs.SEARCH_API_FILTER,
+          executionTime,
+          JSON.stringify(filters),
+        );
+      });
+
+      const result = await resultPromise;
+
+      executionTimePromise.catch((err) =>
+        this.logger.warn('Failed to log execution time:', err),
+      );
       return result;
     } catch (error) {
       this.logger.error('Error Search stored data:', error);

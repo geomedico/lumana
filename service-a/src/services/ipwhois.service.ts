@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { IpInfo } from '../models/ipinfo.model';
@@ -16,8 +16,16 @@ export class IPWhoisService {
       );
 
       if (!response?.data || response.status !== 200) {
-        throw new Error(
+        throw new HttpException(
           `Invalid response from IPWhois: ${JSON.stringify(response?.data)}`,
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      if (response?.data?.success === false) {
+        throw new HttpException(
+          response?.data?.message,
+          HttpStatus.BAD_REQUEST,
         );
       }
 
@@ -27,7 +35,7 @@ export class IPWhoisService {
         `Error fetching data for IP ${ip} from IPWhois:`,
         error,
       );
-      return Promise.reject(error);
+      throw error;
     }
   }
 }

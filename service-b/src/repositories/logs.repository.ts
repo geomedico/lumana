@@ -1,25 +1,26 @@
-import { Collection, InsertOneResult, WithId, ObjectId } from 'mongodb';
+import { Collection, InsertOneResult, ObjectId } from 'mongodb';
 
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { MongoDBConfig } from '../config/mongodb.config';
-import { Log } from '../models/log.model';
+import { Log, OutPutLog } from '../models/log.model';
 
 @Injectable()
 export class LogsRepository implements OnModuleInit {
   private collection: Collection<Log>;
+  private readonly logger = new Logger(LogsRepository.name);
 
   constructor(private readonly mongoDBService: MongoDBConfig) {}
 
   async onModuleInit() {
-    console.log('🔍 Waiting for MongoDB to be ready...');
+    this.logger.log('🔍 Waiting for MongoDB to be ready...');
     await new Promise<void>((resolve) => {
       if (this.mongoDBService['db']) {
         resolve();
       } else {
         this.mongoDBService.on('mongo_ready', async () => {
-          console.log('✅ MongoDB_B is ready!');
+          this.logger.log('✅ MongoDB_B is ready!');
           this.collection = this.mongoDBService.getCollection<Log>('logs');
-          console.log('✅ LogRepository is ready!');
+          this.logger.log('✅ LogRepository is ready!');
           await this.createIndexes();
           resolve();
         });
@@ -40,7 +41,7 @@ export class LogsRepository implements OnModuleInit {
     });
   }
 
-  async findLogs(startDate: Date, endDate: Date): Promise<WithId<Log>[]> {
+  async findLogs(startDate: Date, endDate: Date): Promise<OutPutLog> {
     return this.collection
       .find({ timestamp: { $gte: startDate, $lte: endDate } })
       .toArray();

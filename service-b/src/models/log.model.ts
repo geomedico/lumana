@@ -1,4 +1,4 @@
-import { ObjectId } from 'mongodb';
+import { ObjectId, WithId } from 'mongodb';
 
 export interface Log {
   _id: ObjectId;
@@ -6,3 +6,5 @@ export interface Log {
   data: string;
   timestamp: Date;
 }
+
+export type OutPutLog = WithId<Log>[];

@@ -23,7 +23,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/IPWhoisDto"
-
+        "400":
+          description: Bad Request - Invalid or Reserved IP Address
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              
   /search/list:
     get:
       summary: Get stored search data with pagination
@@ -110,6 +122,15 @@ paths:
                   $ref: "#/components/schemas/LogDto"
 components:
   schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: "reserved range"  
     LogDto:
       type: object
       properties:
