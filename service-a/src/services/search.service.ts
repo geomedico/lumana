@@ -51,7 +51,7 @@ export class SearchService {
       }
 
       throw new HttpException(
-        'Internal Server Error',
+        `Error fetching data for IP ${ip}`,
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -86,8 +86,10 @@ export class SearchService {
       );
       return result;
     } catch (error) {
-      this.logger.error('Error Search stored data:', error);
-      return Promise.reject(error);
+      this.logger.error('Search failed:', error);
+      throw error instanceof HttpException
+        ? error
+        : new HttpException('Search failed', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }

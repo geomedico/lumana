@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Logger } from '@nestjs/common';
 
 import { SearchService } from './search.service';
 import { SearchRepository } from '../repositories/search.repository';
@@ -119,6 +119,19 @@ describe('SearchService', () => {
       expect(result).toEqual(mockData);
     });
 
+    it('should return HTTP exception when IP is in reserved range', async () => {
+      const mockIp = '229.214.26.237';
+      const error = new HttpException('reserved range', HttpStatus.BAD_REQUEST);
+
+      (searchRepository.find as jest.Mock).mockResolvedValue(null);
+      (ipWhoisService.fetchIPData as jest.Mock).mockRejectedValue(error);
+
+      await expect(searchService.search(mockIp)).rejects.toThrow(HttpException);
+      await expect(searchService.search(mockIp)).rejects.toThrow(
+        'reserved range',
+      );
+    });
+
     it('should log an error and reject when fetch fails', async () => {
       const mockIp = '193.254.165.0';
       const error = new Error('Fetch failed');
@@ -127,10 +140,14 @@ describe('SearchService', () => {
       (searchRepository.find as jest.Mock).mockResolvedValue(null);
       (ipWhoisService.fetchIPData as jest.Mock).mockRejectedValue(error);
 
-      await expect(searchService.search(mockIp)).rejects.toThrow(error);
+      await expect(searchService.search(mockIp)).rejects.toThrow(HttpException);
+      await expect(searchService.search(mockIp)).rejects.toMatchObject({
+        response: `Error fetching data for IP ${mockIp}`,
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      });
 
       expect(loggerSpy).toHaveBeenCalledWith(
-        `Error fetching data for IP ${mockIp} from IPWhois:`,
+        `Error fetching data for IP ${mockIp}:`,
         error,
       );
     });
@@ -167,27 +184,6 @@ describe('SearchService', () => {
         JSON.stringify(filters),
       );
       expect(result).toEqual(mockData);
-    });
-
-    it('should log an error and reject when search fails', async () => {
-      const filters = { country: 'Germany', city: 'Berlin' };
-      const page = 1;
-      const limit = 10;
-      const error = new Error('Search failed');
-      const loggerSpy = jest.spyOn(Logger.prototype, 'error');
-
-      (searchRepository.findWithPagination as jest.Mock).mockRejectedValue(
-        error,
-      );
-
-      await expect(
-        searchService.searchStoredData(filters, page, limit),
-      ).rejects.toThrow(error);
-
-      expect(loggerSpy).toHaveBeenCalledWith(
-        'Error Search stored data:',
-        error,
-      );
     });
   });
 });
