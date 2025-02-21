@@ -3,7 +3,7 @@ import { HttpException, HttpStatus, Logger } from '@nestjs/common';
 
 import { SearchService } from './search.service';
 import { SearchRepository } from '../repositories/search.repository';
-import { RabbitMQService } from '../config/rabbitmq.config';
+import { RabbitMQConfig } from '../config/rabbitmq.config';
 import { IPWhoisService } from './ipwhois.service';
 import { TimeseriesService } from './timeseries.service';
 import { IpInfo } from '../models/ipinfo.model';
@@ -13,8 +13,6 @@ describe('SearchService', () => {
   let searchService: SearchService;
   let searchRepository: SearchRepository;
   let ipWhoisService: IPWhoisService;
-  let rabbitMQService: RabbitMQService;
-  let redisTimeSeriesService: TimeseriesService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -23,19 +21,24 @@ describe('SearchService', () => {
         {
           provide: SearchRepository,
           useValue: {
-            find: jest.fn(),
-            insert: jest.fn(),
-            findWithPagination: jest.fn(),
+            find: jest.fn().mockResolvedValue(null),
+            insert: jest.fn().mockResolvedValue(null),
+            findWithPagination: jest.fn().mockResolvedValue([]),
           },
         },
         {
           provide: IPWhoisService,
           useValue: {
-            fetchIPData: jest.fn(),
+            fetchIPData: jest.fn().mockResolvedValue({
+              ip: '193.254.165.0',
+              country: 'Germany',
+              city: 'Berlin',
+              currency: 'EUR',
+            }),
           },
         },
         {
-          provide: RabbitMQService,
+          provide: RabbitMQConfig,
           useValue: {
             publish: jest.fn(),
           },
@@ -52,8 +55,9 @@ describe('SearchService', () => {
     searchService = module.get<SearchService>(SearchService);
     searchRepository = module.get<SearchRepository>(SearchRepository);
     ipWhoisService = module.get<IPWhoisService>(IPWhoisService);
-    rabbitMQService = module.get<RabbitMQService>(RabbitMQService);
-    redisTimeSeriesService = module.get<TimeseriesService>(TimeseriesService);
+
+    // Spy on logPusher to track calls
+    jest.spyOn(searchService as any, 'logPusher').mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -77,15 +81,14 @@ describe('SearchService', () => {
       expect(searchRepository.find).toHaveBeenCalledWith(mockIp);
       expect(ipWhoisService.fetchIPData).not.toHaveBeenCalled();
       expect(searchRepository.insert).not.toHaveBeenCalled();
-      expect(rabbitMQService.publish).toHaveBeenCalledWith('search.completed', {
+
+      expect(searchService['logPusher']).toHaveBeenCalledWith({
+        apiName: TLogs.SEARCH_API_IP,
         query: mockIp,
-        result: mockData,
+        executionTime: expect.any(Number),
+        storedData: mockData,
       });
-      expect(redisTimeSeriesService.logExecutionTime).toHaveBeenCalledWith(
-        TLogs.SEARCH_API_IP,
-        expect.any(Number),
-        mockIp,
-      );
+
       expect(result).toEqual(mockData);
     });
 
@@ -107,15 +110,14 @@ describe('SearchService', () => {
       expect(searchRepository.find).toHaveBeenCalledWith(mockIp);
       expect(ipWhoisService.fetchIPData).toHaveBeenCalledWith(mockIp);
       expect(searchRepository.insert).toHaveBeenCalledWith(mockData);
-      expect(rabbitMQService.publish).toHaveBeenCalledWith('search.completed', {
+
+      expect(searchService['logPusher']).toHaveBeenCalledWith({
+        apiName: TLogs.SEARCH_API_IP,
         query: mockIp,
-        result: mockData,
+        executionTime: expect.any(Number),
+        storedData: mockData,
       });
-      expect(redisTimeSeriesService.logExecutionTime).toHaveBeenCalledWith(
-        TLogs.SEARCH_API_IP,
-        expect.any(Number),
-        mockIp,
-      );
+
       expect(result).toEqual(mockData);
     });
 
@@ -127,9 +129,10 @@ describe('SearchService', () => {
       (ipWhoisService.fetchIPData as jest.Mock).mockRejectedValue(error);
 
       await expect(searchService.search(mockIp)).rejects.toThrow(HttpException);
-      await expect(searchService.search(mockIp)).rejects.toThrow(
-        'reserved range',
-      );
+      await expect(searchService.search(mockIp)).rejects.toMatchObject({
+        response: 'reserved range',
+        status: HttpStatus.BAD_REQUEST,
+      });
     });
 
     it('should log an error and reject when fetch fails', async () => {
@@ -178,11 +181,14 @@ describe('SearchService', () => {
         page,
         limit,
       );
-      expect(redisTimeSeriesService.logExecutionTime).toHaveBeenCalledWith(
-        TLogs.SEARCH_API_FILTER,
-        expect.any(Number),
-        JSON.stringify(filters),
-      );
+
+      expect(searchService['logPusher']).toHaveBeenCalledWith({
+        apiName: TLogs.SEARCH_API_FILTER,
+        query: filters,
+        executionTime: expect.any(Number),
+        storedData: {} as unknown as IpInfo,
+      });
+
       expect(result).toEqual(mockData);
     });
   });

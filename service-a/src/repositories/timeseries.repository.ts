@@ -10,12 +10,12 @@ export class TimeseriesRepo {
     return this.redisTimeSeriesRepo.getLogs(metric, start, end);
   }
 
-  async logExecutionTime(
+  async logExecutionTime<T>(
     metric: string,
     executionTime: number,
-    query?: string,
+    query?: T,
   ): Promise<void> {
-    return this.redisTimeSeriesRepo.logExecutionTime(
+    return this.redisTimeSeriesRepo.logExecutionTime<T>(
       metric,
       executionTime,
       query,

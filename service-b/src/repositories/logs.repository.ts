@@ -3,6 +3,7 @@ import { Collection, InsertOneResult, ObjectId } from 'mongodb';
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { MongoDBConfig } from '../config/mongodb.config';
 import { Log, OutPutLog } from '../models/log.model';
+import { LogEvent } from './../models/log-event.model';
 
 @Injectable()
 export class LogsRepository implements OnModuleInit {
@@ -12,31 +13,26 @@ export class LogsRepository implements OnModuleInit {
   constructor(private readonly mongoDBService: MongoDBConfig) {}
 
   async onModuleInit() {
-    this.logger.log('🔍 Waiting for MongoDB to be ready...');
-    await new Promise<void>((resolve) => {
-      if (this.mongoDBService['db']) {
-        resolve();
-      } else {
-        this.mongoDBService.on('mongo_ready', async () => {
-          this.logger.log('✅ MongoDB_B is ready!');
-          this.collection = this.mongoDBService.getCollection<Log>('logs');
-          this.logger.log('✅ LogRepository is ready!');
-          await this.createIndexes();
-          resolve();
-        });
-      }
-    });
+    await this.mongoDBService.isReady();
+    this.collection = this.mongoDBService.getCollection<Log>('logs');
+    this.logger.log('✅ LogRepository is ready!');
+    await this.createIndexes();
   }
 
   async createIndexes(): Promise<void> {
-    await this.collection?.createIndexes([{ key: { timestamp: 1 } }]);
+    await this.collection?.createIndexes([
+      { key: { timestamp: 1, apiName: 1 } },
+    ]);
   }
 
-  async storeLog(logData: Record<string, any>): Promise<InsertOneResult<Log>> {
+  async storeLog(logData: LogEvent): Promise<InsertOneResult<Log>> {
     const timestamp = new Date();
+    const { apiName, ...data } = logData || {};
+
     return this.collection.insertOne({
       _id: new ObjectId(),
-      data: JSON.stringify(logData, null, 2),
+      apiName,
+      data: JSON.stringify(data, null, 2),
       timestamp,
     });
   }

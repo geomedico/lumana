@@ -1,10 +1,10 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { performance } from 'perf_hooks';
-import { SearchRepository } from '../repositories/search.repository';
-import { RabbitMQService } from '../config/rabbitmq.config';
 import { IPWhoisService } from './ipwhois.service';
 import { TimeseriesService } from './timeseries.service';
-import { IpInfo } from './../models/ipinfo.model';
+import { SearchRepository } from './../repositories/search.repository';
+import { RabbitMQConfig } from './../config/rabbitmq.config';
+import { IpInfo, SearchFilter } from './../models/ipinfo.model';
 import { TLogs } from './../common/enums';
 
 @Injectable()
@@ -13,9 +13,34 @@ export class SearchService {
   constructor(
     private readonly searchRepository: SearchRepository,
     private readonly ipWhoisService: IPWhoisService,
-    private readonly rabbitMQService: RabbitMQService,
+    private readonly rabbitMQService: RabbitMQConfig,
     private readonly redisTimeSeriesService: TimeseriesService,
   ) {}
+
+  private async logPusher<Q extends string | SearchFilter, T extends IpInfo>({
+    storedData,
+    executionTime,
+    query,
+    apiName,
+  }: {
+    storedData: T;
+    executionTime: number;
+    query: Q;
+    apiName: TLogs;
+  }): Promise<T | T[]> {
+    return Promise.allSettled([
+      this.rabbitMQService.publish('search.completed', {
+        apiName,
+        query,
+        result: storedData,
+      }),
+      this.redisTimeSeriesService.logExecutionTime(
+        apiName,
+        executionTime,
+        query,
+      ),
+    ]).then(() => storedData);
+  }
 
   async search(ip: string): Promise<IpInfo> {
     const startTime = performance.now();
@@ -30,17 +55,12 @@ export class SearchService {
 
       const executionTime = performance.now() - startTime;
 
-      await Promise.allSettled([
-        this.rabbitMQService.publish('search.completed', {
-          query: ip,
-          result: storedData,
-        }),
-        this.redisTimeSeriesService.logExecutionTime(
-          TLogs.SEARCH_API_IP,
-          executionTime,
-          ip,
-        ),
-      ]);
+      await this.logPusher<string, IpInfo>({
+        apiName: TLogs.SEARCH_API_IP,
+        query: ip,
+        executionTime,
+        storedData,
+      });
 
       return storedData;
     } catch (error) {
@@ -72,11 +92,12 @@ export class SearchService {
 
       const executionTimePromise = resultPromise.then(() => {
         const executionTime = performance.now() - startTime;
-        return this.redisTimeSeriesService.logExecutionTime(
-          TLogs.SEARCH_API_FILTER,
+        return this.logPusher<SearchFilter, IpInfo>({
+          apiName: TLogs.SEARCH_API_FILTER,
+          query: filters,
           executionTime,
-          JSON.stringify(filters),
-        );
+          storedData: {} as unknown as IpInfo,
+        });
       });
 
       const result = await resultPromise;
@@ -84,6 +105,7 @@ export class SearchService {
       executionTimePromise.catch((err) =>
         this.logger.warn('Failed to log execution time:', err),
       );
+
       return result;
     } catch (error) {
       this.logger.error('Search failed:', error);

@@ -1,8 +1,14 @@
 import { WithId } from 'mongodb';
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  Logger,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { LogsRepository } from '../repositories/logs.repository';
 import { RabbitMQConfig } from '../config/rabbitmq.config';
-import { Log } from '../models/log.model';
+import { Log } from './../models/log.model';
+import { LogEvent } from './../models/log-event.model';
 
 @Injectable()
 export class LogsService implements OnModuleInit {
@@ -14,15 +20,19 @@ export class LogsService implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
-    await new Promise<void>((resolve) => {
-      this.rabbitMQService.on('rabbit_ready', async () => {
-        this.logger.log('✅ LogsService is ready!');
-        this.rabbitMQService?.consume('search.completed', async (msg) => {
+    try {
+      await this.rabbitMQService.isReady();
+      this.logger.log('✅ LogsService is ready!');
+      this.rabbitMQService?.consume(
+        'search.completed',
+        async (msg: LogEvent) => {
+          this.logger.log('LogsService msg::', msg);
           await this.logsRepository.storeLog(msg);
-        });
-        resolve();
-      });
-    });
+        },
+      );
+    } catch (err) {
+      throw new InternalServerErrorException(err?.message);
+    }
   }
 
   async getLogs(startDate: Date, endDate: Date): Promise<WithId<Log>[]> {
@@ -30,7 +40,7 @@ export class LogsService implements OnModuleInit {
       return this.logsRepository.findLogs(startDate, endDate);
     } catch (err) {
       this.logger.error('error retrieving logs:', err);
-      return Promise.reject(err);
+      throw new InternalServerErrorException(err?.message);
     }
   }
 }

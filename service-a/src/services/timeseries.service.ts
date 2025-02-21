@@ -1,4 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { TimeseriesRepo } from '../repositories/timeseries.repository';
 import { ILog } from './../models/log.model';
 
@@ -13,24 +17,24 @@ export class TimeseriesService {
       return this.timeseriesRepository.getLogs(metric, start, end);
     } catch (err) {
       this.logger.error('error retrieving timeseries logs:', err);
-      return Promise.reject(err);
+      throw new InternalServerErrorException(err?.message);
     }
   }
 
-  async logExecutionTime(
+  async logExecutionTime<T>(
     metric: string,
     executionTime: number,
-    query?: string,
+    query?: T,
   ): Promise<void> {
     try {
-      return this.timeseriesRepository.logExecutionTime(
+      return this.timeseriesRepository.logExecutionTime<T>(
         metric,
         executionTime,
         query,
       );
     } catch (err) {
       this.logger.error('error saving timeseries logs:', err);
-      return Promise.reject(err);
+      throw new InternalServerErrorException(err?.message);
     }
   }
 }

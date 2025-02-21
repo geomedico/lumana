@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { HttpModule } from '@nestjs/axios';
 import { MongoDBConfig } from './config/mongodb.config';
-import { RabbitMQService } from './config/rabbitmq.config';
+import { RabbitMQConfig } from './config/rabbitmq.config';
 import { RedisTimeSeriesConfig } from './config/redis-timeseries.config';
 
 import { SearchController } from './controllers/search.controller';
@@ -21,12 +21,12 @@ import { UtilsModule } from './utils/utils.module';
   providers: [
     MongoDBConfig,
     RedisTimeSeriesConfig,
-    RabbitMQService,
-    SearchService,
+    RabbitMQConfig,
     TimeseriesRepo,
-    TimeseriesService,
     SearchRepository,
     IPWhoisService,
+    TimeseriesService,
+    SearchService,
   ],
 })
 export class AppModule {}

@@ -23,3 +23,5 @@ export interface IpInfo {
   currency_code: string;
   timestamp: Date;
 }
+
+export type SearchFilter = Partial<IpInfo>;

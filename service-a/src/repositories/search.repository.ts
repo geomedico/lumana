@@ -11,25 +11,14 @@ interface IAddFieldSearch {
 @Injectable()
 export class SearchRepository implements OnModuleInit {
   private readonly logger = new Logger(SearchRepository.name);
-
   private collection: Collection<IpInfo>;
   constructor(private readonly mongoDBService: MongoDBConfig) {}
 
   async onModuleInit() {
-    this.logger.log('🔍 Waiting for MongoDB to be ready...');
-    await new Promise<void>((resolve) => {
-      if (this.mongoDBService['db']) {
-        resolve();
-      } else {
-        this.mongoDBService.on('mongo_ready', async () => {
-          this.logger.log('✅ MongoDB_A is ready!');
-          this.collection = this.mongoDBService.getCollection<IpInfo>('ips');
-          this.logger.log('✅ SearchRepository is ready!');
-          await this.createIndexes();
-          resolve();
-        });
-      }
-    });
+    await this.mongoDBService.isReady();
+    this.collection = this.mongoDBService.getCollection<IpInfo>('ips');
+    this.logger.log('✅ SearchRepository is ready!');
+    await this.createIndexes();
   }
 
   async createIndexes(): Promise<void> {

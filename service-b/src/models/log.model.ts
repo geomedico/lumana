@@ -2,7 +2,7 @@ import { ObjectId, WithId } from 'mongodb';
 
 export interface Log {
   _id: ObjectId;
-  eventType?: string;
+  apiName: string;
   data: string;
   timestamp: Date;
 }

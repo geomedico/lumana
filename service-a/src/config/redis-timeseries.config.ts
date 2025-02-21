@@ -1,7 +1,12 @@
 import { createClient } from 'redis';
 import type { RedisClientType } from 'redis';
 
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  Logger,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Util } from './../utils/util-service.util';
 import { ILog } from './../models/log.model';
@@ -17,15 +22,20 @@ export class RedisTimeSeriesConfig implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    const REDIS_URI = this.configService.get<string>('REDIS_URI');
-    this.client = createClient({ url: REDIS_URI });
-    await this.client.connect();
+    try {
+      const REDIS_URI = this.configService.get<string>('REDIS_URI');
+      this.client = createClient({ url: REDIS_URI });
+      await this.client.connect();
+    } catch (err) {
+      this.logger.error('RedisDB_A init error:', err);
+      throw new InternalServerErrorException(err?.message);
+    }
   }
 
-  async logExecutionTime(
+  async logExecutionTime<T>(
     metric: string,
     executionTime: number,
-    query?: string,
+    query?: T,
   ): Promise<void> {
     const timestamp = Date.now();
 
@@ -36,7 +46,7 @@ export class RedisTimeSeriesConfig implements OnModuleInit {
       query,
     });
 
-    await this.client.zAdd(metric, [
+    await this.client.zAdd(metric.trim(), [
       {
         score: timestamp,
         value: logEntry,
